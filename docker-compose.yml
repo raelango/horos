@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "7500:7500"
+    env_file:
+      - ./backend/.env
+    environment:
+      - APP_ENV=docker
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8500:8500"
+    environment:
+      - VITE_API_BASE=http://localhost:7500
+    depends_on:
+      - backend
+    restart: unless-stopped
