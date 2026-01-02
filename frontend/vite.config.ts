@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 8500,
+    allowedHosts: ["astrozone-frontend.azurewebsites.net", "www.astrozone.in"],
     proxy: {
       "/auth": "http://localhost:7500",
       "/preferences": "http://localhost:7500",
