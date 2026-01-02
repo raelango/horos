@@ -11,16 +11,7 @@ const languageOptions: { code: Language; label: string }[] = [
 
 const methodologies: Methodology[] = ["tamil", "vedic", "western"];
 
-const periods = [
-  "today",
-  "tomorrow",
-  "this week",
-  "next week",
-  "this month",
-  "next month",
-  "this quarter",
-  "next quarter"
-];
+const periods = ["today", "tomorrow", "this week", "next week", "this month", "next month", "this quarter", "next quarter"];
 
 type Prefs = { language: Language; methodology: Methodology; periodType: string };
 
@@ -45,6 +36,7 @@ function writePrefsToCookie(prefs: Prefs) {
 
 export default function App() {
   const normalize = (v: string) => v.trim().toLowerCase();
+  const heroBanner = "/images/brand/AstroZone_Banner_1920x700.jpg";
 
   const savedPrefs = readPrefsFromCookie();
   const [language, setLanguage] = useState<Language>(savedPrefs?.language ?? "en");
@@ -159,30 +151,35 @@ export default function App() {
     }
   }, [language, rawGuidance, signs, expanded, details]);
 
+  const languageLabel = languageOptions.find((l) => l.code === language)?.label ?? language;
+
   return (
     <div className="layout">
       <header className="header">
         <div className="brand">
-          <div className="logo-mark">H</div>
+          <img className="brand-icon" src="/images/brand/AstroZone_icon_64x64.png" alt="AstroZone.in" />
           <div>
-            <div className="brand-name">Horos</div>
-            <div className="brand-subtitle">Astrology Guidance</div>
+            <div className="brand-name">AstroZone.in</div>
+            <div className="brand-subtitle">Premium astrology guidance</div>
           </div>
         </div>
-        <nav className="language-switcher" aria-label="Language selection">
-          {languageOptions
-            .filter((lang) => visibleLanguages.includes(lang.code))
-            .map((lang) => (
-              <button
-                key={lang.code}
-                type="button"
-                className={`lang-button ${language === lang.code ? "active" : ""}`}
-                onClick={() => setLanguage(lang.code)}
-              >
-                {lang.label}
-              </button>
-            ))}
-        </nav>
+        <div className="header-right">
+          <div className="header-tagline">Astrological Guidance, Made Personal</div>
+          <nav className="language-switcher" aria-label="Language selection">
+            {languageOptions
+              .filter((lang) => visibleLanguages.includes(lang.code))
+              .map((lang) => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  className={`lang-button ${language === lang.code ? "active" : ""}`}
+                  onClick={() => setLanguage(lang.code)}
+                >
+                  {lang.label}
+                </button>
+              ))}
+          </nav>
+        </div>
       </header>
 
       <main className="app">
@@ -193,11 +190,11 @@ export default function App() {
           </div>
         )}
 
-        <div className="top-strip">
-          <div className="strip-left">
-            <label className="strip-label">Astrology Model</label>
+        <section className="pref-strip">
+          <div className="pref-item">
+            <label className="pref-label">Astrology Model</label>
             <select
-              className="strip-select"
+              className="pref-select"
               value={methodology}
               onChange={(e) => setMethodology(e.target.value as Methodology)}
               disabled={loading || signsLoading}
@@ -209,10 +206,10 @@ export default function App() {
               ))}
             </select>
           </div>
-          <div className="strip-right">
-            <label className="strip-label">Date Range</label>
+          <div className="pref-item pref-right">
+            <label className="pref-label">Date Range</label>
             <select
-              className="strip-select"
+              className="pref-select"
               value={periodType}
               onChange={(e) => setPeriodType(e.target.value)}
               disabled={loading || signsLoading}
@@ -224,12 +221,42 @@ export default function App() {
               ))}
             </select>
           </div>
-        </div>
+        </section>
 
-        {error && <p className="error-text">{error}</p>}
+        <section
+          className="hero"
+          style={{
+            backgroundImage: `linear-gradient(120deg, rgba(11, 20, 55, 0.92), rgba(19, 28, 75, 0.82)), url(${heroBanner})`
+          }}
+        >
+          <div className="hero-copy">
+            <p className="eyebrow">Personalized cosmic clarity</p>
+            <h1>Astrological Guidance, Made Personal</h1>
+            <p className="hero-lede">
+              Refined {methodology} astrology that stays warm, trustworthy, and tailored for the moments that matter. Tune
+              your view for {periodType} and stay aligned with every sign.
+            </p>
+            <div className="pill-row">
+              <span className="pill">{methodology} astrology</span>
+              <span className="pill">{periodType}</span>
+              <span className="pill">{languageLabel} delivery</span>
+            </div>
+          </div>
+        </section>
+
+        {error && !guidanceBatch && <p className="error-text">{error}</p>}
 
         {guidanceBatch && (
           <div className="guidance-block">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Zodiac journeys</p>
+                <h2>Sign-specific guidance</h2>
+              </div>
+            </div>
+
+            {error && <p className="error-text">{error}</p>}
+
             <div className="guidance-grid">
               {guidanceBatch
                 .sort((a, b) => a.sign.localeCompare(b.sign))
@@ -278,55 +305,57 @@ export default function App() {
                         style={{ margin: 0, minHeight: 70 }}
                         dangerouslySetInnerHTML={{ __html: shortGeneral || item.text }}
                       />
-                      <div className="card-actions">
-                        <button
-                          className="more-button"
-                          type="button"
-                          onClick={() => {
-                            setExpanded((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(item.sign)) {
-                                next.delete(item.sign);
-                              } else {
-                                next.add(item.sign);
+                      <div className="card-foot">
+                        {isOpen && (
+                          <div className="detail-block">
+                            {blocks.length === 0 && (
+                              <div className="detail-item">
+                                <div className="detail-title">General</div>
+                                <p className="detail-text">{item.text}</p>
+                              </div>
+                            )}
+                            {blocks.map((block, idx) => (
+                              <div key={idx} className="detail-item timeframe-item">
+                                <div className="timeframe-header">
+                                  {block.label && <div className="detail-title">{block.label}</div>}
+                                  {block.basis && <div className="detail-basis">{block.basis}</div>}
+                                </div>
+                                <div className="timeframe-categories">
+                                  {block.categories.map((c) => (
+                                    <div key={c.category} className="timeframe-category">
+                                      <div className="detail-title">{c.category}</div>
+                                      <p className="detail-text">{c.text}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="card-actions">
+                          <button
+                            className="more-button"
+                            type="button"
+                            onClick={() => {
+                              setExpanded((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(item.sign)) {
+                                  next.delete(item.sign);
+                                } else {
+                                  next.add(item.sign);
+                                }
+                                return next;
+                              });
+                              if (!expanded.has(item.sign) && rawGuidance) {
+                                const cats = getSignBlocks(rawGuidance, language, signs, item.sign);
+                                setDetails((d) => ({ ...d, [item.sign]: cats }));
                               }
-                              return next;
-                            });
-                            if (!expanded.has(item.sign) && rawGuidance) {
-                              const cats = getSignBlocks(rawGuidance, language, signs, item.sign);
-                              setDetails((d) => ({ ...d, [item.sign]: cats }));
-                            }
-                          }}
-                        >
-                          {isOpen ? "Less" : "More..."}
-                        </button>
-                      </div>
-                      {isOpen && (
-                        <div className="detail-block">
-                          {blocks.length === 0 && (
-                            <div className="detail-item">
-                              <div className="detail-title">General</div>
-                              <p className="detail-text">{item.text}</p>
-                            </div>
-                          )}
-                          {blocks.map((block, idx) => (
-                            <div key={idx} className="detail-item timeframe-item">
-                              <div className="timeframe-header">
-                                {block.label && <div className="detail-title">{block.label}</div>}
-                                {block.basis && <div className="detail-basis">{block.basis}</div>}
-                              </div>
-                              <div className="timeframe-categories">
-                                {block.categories.map((c) => (
-                                  <div key={c.category} className="timeframe-category">
-                                    <div className="detail-title">{c.category}</div>
-                                    <p className="detail-text">{c.text}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                            }}
+                          >
+                            {isOpen ? "Less" : "More"}
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -336,7 +365,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <span>(c) 2026 Horos. All rights reserved.</span>
+        <span>© 2026 AstroZone.in. All rights reserved.</span>
       </footer>
     </div>
   );
