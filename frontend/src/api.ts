@@ -94,3 +94,21 @@ export async function locatePanchangPlace(query: { place?: string; lat?: number;
   if (!res.ok) throw new Error(`Failed to resolve place: ${res.status}`);
   return res.json();
 }
+
+export async function fetchHoroscope(params: {
+  date: string;
+  time: string;
+  lat: number;
+  lon: number;
+  tz: string;
+  placeName?: string;
+  language: string;
+}) {
+  const res = await fetch(`${BASE_URL}/horoscope/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  });
+  if (!res.ok) throw new Error(`Failed to generate horoscope: ${res.status}`);
+  return res.json();
+}

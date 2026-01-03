@@ -5,3 +5,5 @@ pydantic==2.5.3
 email-validator==2.1.1
 python-dotenv==1.0.1
 openai==2.14.0
+# pyswisseph pinned to available build; 2.10.3.2 includes Lahiri/Swiss eph data
+pyswisseph==2.10.3.2

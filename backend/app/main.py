@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routes import auth, guidance, preferences, profile, translations, zodiac, panchang
+from .routes import auth, guidance, preferences, profile, translations, zodiac, panchang, horoscope
 
 
 app = FastAPI(title=settings.app_name)
@@ -36,3 +36,4 @@ app.include_router(guidance.router)
 app.include_router(translations.router)
 app.include_router(zodiac.router)
 app.include_router(panchang.router)
+app.include_router(horoscope.router)

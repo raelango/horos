@@ -1,173 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchGuidanceBatch, fetchZodiacSigns, fetchPanchangam, locatePanchangPlace } from "./api";
+import { fetchGuidanceBatch, fetchZodiacSigns, fetchPanchangam, locatePanchangPlace, fetchHoroscope } from "./api";
 import { parseGuidanceRaw, ParsedGuidanceMap, getSignBlocks, SignTimeBlock } from "./guidanceHelper";
 import { Language, Methodology, ParsedGuidanceItem, ZodiacSign, PanchangData } from "./types";
+import { copy } from "./i18n";
 
 const languageOptions: { code: Language; label: string }[] = [
   { code: "en", label: "English" },
   { code: "ta", label: "Tamil" },
   { code: "hi", label: "Hindi" }
 ];
-
-const copy: Record<
-  Language,
-  {
-    guidanceHeading: string;
-    guidanceEyebrow: string;
-    panchangHeading: string;
-    panchangEyebrow: string;
-    astrologyModel: string;
-    dateRange: string;
-    hiddenNone: string;
-    hiddenTitle: string;
-    unhideAll: string;
-    heroEyebrow: string;
-    heroTitle: string;
-    heroBody: (m: string, p: string) => string;
-    chipMethod: (m: string) => string;
-    chipPeriod: (p: string) => string;
-    chipLang: (l: string) => string;
-    loadPanchang: string;
-    astronomy: string;
-    sunrise: string;
-    sunset: string;
-    nextSunrise: string;
-    angas: string;
-    vara: string;
-    tithi: string;
-    nakshatra: string;
-    yoga: string;
-    karana: string;
-    auspicious: string;
-    avoid: string;
-    brahma: string;
-    abhijit: string;
-    rahu: string;
-    yama: string;
-    gulikai: string;
-    dur: string;
-    varjyam: string;
-    locationLabel: (lat: number, lon: number) => string;
-  }
-> = {
-  en: {
-    guidanceHeading: "Sign-specific guidance",
-    guidanceEyebrow: "Zodiac journeys",
-    panchangHeading: "Daily Panchangam",
-    panchangEyebrow: "Sunrise to sunrise",
-    astrologyModel: "Astrology Model",
-    dateRange: "Date Range",
-    hiddenNone: "No signs hidden.",
-    hiddenTitle: "Hidden signs",
-    unhideAll: "Unhide all",
-    heroEyebrow: "Personalized cosmic clarity",
-    heroTitle: "Astrological Guidance, Made Personal",
-    heroBody: (m, p) =>
-      `Refined ${m} astrology that stays warm, trustworthy, and tailored for the moments that matter. Tune your view for ${p} and stay aligned with every sign.`,
-    chipMethod: (m) => `${m} astrology`,
-    chipPeriod: (p) => p,
-    chipLang: (l) => `${l} delivery`,
-    loadPanchang: "Load Panchangam",
-    astronomy: "Astronomy",
-    sunrise: "Sunrise",
-    sunset: "Sunset",
-    nextSunrise: "Next Sunrise",
-    angas: "Panchanga Angas",
-    vara: "Vara",
-    tithi: "Tithi",
-    nakshatra: "Nakshatra",
-    yoga: "Yoga",
-    karana: "Karana",
-    auspicious: "Auspicious",
-    avoid: "Avoid",
-    brahma: "Brahma Muhurta",
-    abhijit: "Abhijit Muhurta",
-    rahu: "Rahu Kalam",
-    yama: "Yamagandam",
-    gulikai: "Gulikai",
-    dur: "Dur Muhurtam",
-    varjyam: "Varjyam",
-    locationLabel: (lat, lon) => `Lat ${lat}, Lon ${lon}`
-  },
-  ta: {
-    guidanceHeading: "ராசி வழிகாட்டி",
-    guidanceEyebrow: "ராசி பயணங்கள்",
-    panchangHeading: "நாள் பஞ்சாங்கம்",
-    panchangEyebrow: "சூரிய உதயம் முதல்",
-    astrologyModel: "ஜோதிடம் முறை",
-    dateRange: "கால வரம்பு",
-    hiddenNone: "மறைந்த ராசிகள் இல்லை.",
-    hiddenTitle: "மறைத்த ராசிகள்",
-    unhideAll: "அனைத்தையும் காட்டவும்",
-    heroEyebrow: "தனிப்பயன் ஜோதிட வழிகாட்டி",
-    heroTitle: "தனிப்பட்ட ஜோதிட வழிகாட்டல்",
-    heroBody: (m, p) =>
-      `${m} ஜோதிடம் நம்பிக்கையுடன், நெருக்கமான வடிவத்தில். ${p}க்கான பார்வையை அமைத்து ஒவ்வொரு ராசியுடனும் இணைந்து இருங்கள்.`,
-    chipMethod: (m) => `${m} ஜோதிடம்`,
-    chipPeriod: (p) => p,
-    chipLang: (l) => `${l} வழங்கல்`,
-    loadPanchang: "பஞ்சாங்கம் ஏற்று",
-    astronomy: "வானியல்",
-    sunrise: "சூரிய உதயம்",
-    sunset: "சூரிய அஸ்தமனம்",
-    nextSunrise: "அடுத்த உதயம்",
-    angas: "பஞ்சாங்க அங்கங்கள்",
-    vara: "வாரா",
-    tithi: "திதி",
-    nakshatra: "நட்சத்திரம்",
-    yoga: "யோகம்",
-    karana: "கரணம்",
-    auspicious: "சுபம்",
-    avoid: "விலக்கு",
-    brahma: "பிரம்ம முகூர்த்தம்",
-    abhijit: "அபிஜித் முகூர்த்தம்",
-    rahu: "ராகு காலம்",
-    yama: "யமகண்டம்",
-    gulikai: "குளிகை",
-    dur: "துர்முஹூர்த்தம்",
-    varjyam: "வர்ஜ்யம்",
-    locationLabel: (lat, lon) => `அட்ச. ${lat}, தொகை ${lon}`
-  },
-  hi: {
-    guidanceHeading: "राशि मार्गदर्शन",
-    guidanceEyebrow: "राशि यात्राएँ",
-    panchangHeading: "दैनिक पंचांग",
-    panchangEyebrow: "सूर्योदय से सूर्योदय",
-    astrologyModel: "ज्योतिष विधि",
-    dateRange: "तिथि सीमा",
-    hiddenNone: "कोई राशि छुपी नहीं है.",
-    hiddenTitle: "छुपी राशियाँ",
-    unhideAll: "सभी दिखाएँ",
-    heroEyebrow: "व्यक्तिगत ज्योतिष स्पष्टता",
-    heroTitle: "व्यक्तिगत ज्योतिष मार्गदर्शन",
-    heroBody: (m, p) =>
-      `${m} ज्योतिष को भरोसेमंद और गर्मजोशी के साथ प्रस्तुत किया गया है। ${p} के लिए अपना दृश्य सेट करें और हर राशि से जुड़े रहें।`,
-    chipMethod: (m) => `${m} ज्योतिष`,
-    chipPeriod: (p) => p,
-    chipLang: (l) => `${l} में`,
-    loadPanchang: "पंचांग लोड करें",
-    astronomy: "खगोल",
-    sunrise: "सूर्योदय",
-    sunset: "सूर्यास्त",
-    nextSunrise: "अगला सूर्योदय",
-    angas: "पंचांग अंग",
-    vara: "वार",
-    tithi: "तिथि",
-    nakshatra: "नक्षत्र",
-    yoga: "योग",
-    karana: "करण",
-    auspicious: "शुभ",
-    avoid: "वर्जित",
-    brahma: "ब्रह्म मुहूर्त",
-    abhijit: "अभिजीत मुहूर्त",
-    rahu: "राहु काल",
-    yama: "यमगंड",
-    gulikai: "गुलिक काल",
-    dur: "दुर्मुहूर्त",
-    varjyam: "वर्ज्य",
-    locationLabel: (lat, lon) => `अक्षांश ${lat}, देशांतर ${lon}`
-  }
-};
 
 const methodologies: Methodology[] = ["tamil", "vedic", "western"];
 
@@ -202,7 +43,7 @@ type Prefs = {
   methodology: Methodology;
   periodType: string;
   hiddenSigns?: string[];
-  activeTab?: "guidance" | "panchangam";
+  activeTab?: "guidance" | "panchangam" | "horoscope";
 };
 
 type GeoSuggestion = {
@@ -271,7 +112,6 @@ export default function App() {
   const [signs, setSigns] = useState<ZodiacSign[]>([]);
   const [visibleLanguages, setVisibleLanguages] = useState<Language[]>(["en", "ta", "hi"]);
   const [showHiddenManager, setShowHiddenManager] = useState(false);
-  const [activeTab, setActiveTab] = useState<"guidance" | "panchangam">(savedPrefs?.activeTab ?? "guidance");
   const [panchang, setPanchang] = useState<PanchangData | null>(null);
   const [panchangLoading, setPanchangLoading] = useState(false);
   const [panchangError, setPanchangError] = useState<string | null>(null);
@@ -282,15 +122,37 @@ export default function App() {
   const [geoStatus, setGeoStatus] = useState<string | null>(null);
   const [showLocationEditor, setShowLocationEditor] = useState(false);
   const [placeQuery, setPlaceQuery] = useState("");
+  const [horoscopePlaceQuery, setHoroscopePlaceQuery] = useState("");
   const [locationLabel, setLocationLabel] = useState<string>("");
   const [lastGuidanceToken, setLastGuidanceToken] = useState<string | null>(null);
   const [placeResults, setPlaceResults] = useState<GeoSuggestion[]>([]);
   const [placeSearching, setPlaceSearching] = useState(false);
   const [placeSearchError, setPlaceSearchError] = useState<string | null>(null);
+  const [horoscopeResults, setHoroscopeResults] = useState<GeoSuggestion[]>([]);
+  const [horoscopeSearching, setHoroscopeSearching] = useState(false);
+  const [horoscopeSearchError, setHoroscopeSearchError] = useState<string | null>(null);
   const [lastPanchangKey, setLastPanchangKey] = useState<string | null>(null);
   const initialGeoAttempted = useRef(false);
   const [geoPending, setGeoPending] = useState(false);
   const dateInputRef = useRef<HTMLInputElement | null>(null);
+  const [activeTab, setActiveTab] = useState<"guidance" | "panchangam" | "horoscope">(savedPrefs?.activeTab ?? "guidance");
+const [horoscopeDate, setHoroscopeDate] = useState(() => new Date().toISOString().slice(0, 10));
+const [horoscopeTime, setHoroscopeTime] = useState("12:00");
+const [horoscopeLat, setHoroscopeLat] = useState(0);
+const [horoscopeLon, setHoroscopeLon] = useState(0);
+const [horoscopeLabel, setHoroscopeLabel] = useState("No City Selected");
+const [horoscopeTz, setHoroscopeTz] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata");
+const [horoscopeSummary, setHoroscopeSummary] = useState<string | null>(null);
+const [rasiChart, setRasiChart] = useState<{ label: string; bodies: string }[][] | null>(null);
+const [navamsaChart, setNavamsaChart] = useState<{ label: string; bodies: string }[][] | null>(null);
+const [horoscopeError, setHoroscopeError] = useState<string | null>(null);
+const [planetPositions, setPlanetPositions] = useState<any[]>([]);
+const [birthDetails, setBirthDetails] = useState<{ label: string; value: string }[]>([]);
+const [horoscopeLoading, setHoroscopeLoading] = useState(false);
+const [horoscopeMeta, setHoroscopeMeta] = useState<any | null>(null);
+const [mahadasas, setMahadasas] = useState<
+  { name: string; start: string; end: string; bhuktis: { name: string; start: string; end: string }[]; open?: boolean }[]
+>([]);
   const openDatePicker = () => {
     const input = dateInputRef.current;
     if (!input) return;
@@ -399,27 +261,37 @@ export default function App() {
       setPlaceSearching(true);
       setPlaceSearchError(null);
       try {
-        const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
-        url.searchParams.set("name", q);
-        url.searchParams.set("count", "6");
-        url.searchParams.set("language", "en");
-        const res = await fetch(url.toString(), { signal: controller.signal });
-        if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
-        const data = await res.json();
-        const mapped: GeoSuggestion[] = (Array.isArray(data.results) ? data.results : []).map((r: any, idx: number) => ({
-          id: r.id ?? idx,
-          name: r.name,
-          country: r.country,
-          admin1: r.admin1,
-          latitude: r.latitude,
-          longitude: r.longitude,
-          timezone: r.timezone
-        }));
+        const res = await locatePanchangPlace({ place: q });
+        const mapped: GeoSuggestion[] = res?.results
+          ? res.results
+              .filter((r: any) => r && r.lat && r.lon)
+              .map((r: any, idx: number) => ({
+                id: r.id ?? idx,
+                name: r.name,
+                country: r.country,
+                admin1: r.admin1,
+                latitude: parseFloat(r.lat),
+                longitude: parseFloat(r.lon),
+                timezone: r.tz
+              }))
+          : res?.lat && res?.lon
+          ? [
+              {
+                id: 1,
+                name: res.name,
+                country: res.country,
+                admin1: res.admin1,
+                latitude: parseFloat(res.lat),
+                longitude: parseFloat(res.lon),
+                timezone: res.tz
+              }
+            ]
+          : [];
         setPlaceResults(mapped);
       } catch (err) {
         if (controller.signal.aborted) return;
         setPlaceResults([]);
-        setPlaceSearchError("Unable to fetch places. Try again.");
+        setPlaceSearchError(copy[language]?.placesError ?? copy.en.placesError);
       } finally {
         if (!controller.signal.aborted) {
           setPlaceSearching(false);
@@ -431,6 +303,61 @@ export default function App() {
       controller.abort();
     };
   }, [placeQuery]);
+
+  useEffect(() => {
+    const q = horoscopePlaceQuery.trim();
+    if (q.length < 3) {
+      setHoroscopeResults([]);
+      setHoroscopeSearchError(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setHoroscopeSearching(true);
+      setHoroscopeSearchError(null);
+      try {
+        const res = await locatePanchangPlace({ place: q });
+        const mapped: GeoSuggestion[] = res?.results
+          ? res.results
+              .filter((r: any) => r && r.lat && r.lon)
+              .map((r: any, idx: number) => ({
+                id: r.id ?? idx,
+                name: r.name,
+                country: r.country,
+                admin1: r.admin1,
+                latitude: parseFloat(r.lat),
+                longitude: parseFloat(r.lon),
+                timezone: r.tz
+              }))
+          : res?.lat && res?.lon
+          ? [
+              {
+                id: 1,
+                name: res.name,
+                country: res.country,
+                admin1: res.admin1,
+                latitude: parseFloat(res.lat),
+                longitude: parseFloat(res.lon),
+                timezone: res.tz
+              }
+            ]
+          : [];
+        setHoroscopeResults(mapped);
+      } catch {
+        if (controller.signal.aborted) return;
+        setHoroscopeResults([]);
+        setHoroscopeSearchError(copy[language]?.placesError ?? copy.en.placesError);
+      } finally {
+        if (!controller.signal.aborted) {
+          setHoroscopeSearching(false);
+        }
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [horoscopePlaceQuery]);
 
   useEffect(() => {
     if (activeTab !== "panchangam") return;
@@ -457,13 +384,219 @@ export default function App() {
     initialGeoAttempted.current = true;
     detectLocation(true);
   }, []);
-  const t = <K extends keyof (typeof copy)["en"]>(key: K, ...rest: any[]) => {
-    const langCopy = copy[language] || copy.en;
-    const val = langCopy[key] as any;
+
+  const handleHoroscopeSelect = (place: GeoSuggestion) => {
+    const label = formatPlaceLabel(place) || place.name || "Selected location";
+    setHoroscopeLat(place.latitude);
+    setHoroscopeLon(place.longitude);
+    setHoroscopeLabel(label);
+    setHoroscopePlaceQuery(label);
+    setHoroscopeResults([]);
+    setHoroscopeSearchError(null);
+    setHoroscopeSearching(false);
+    if (isValidTz(place.timezone)) {
+      setHoroscopeTz(place.timezone as string);
+    }
+  };
+
+  const generateHoroscope = async () => {
+    setHoroscopeError(null);
+    setHoroscopeSummary(null);
+    setRasiChart(null);
+    setNavamsaChart(null);
+    setPlanetPositions([]);
+    setBirthDetails([]);
+    setHoroscopeMeta(null);
+    if (horoscopeLat === 0 && horoscopeLon === 0) {
+      setHoroscopeError(t("horoscopeMissingLocation"));
+      return;
+    }
+    setHoroscopeLoading(true);
+    try {
+      const resp = await fetchHoroscope({
+        date: horoscopeDate,
+        time: horoscopeTime,
+        lat: horoscopeLat,
+        lon: horoscopeLon,
+        tz: horoscopeTz,
+        placeName: horoscopeLabel,
+        language
+      });
+      setHoroscopeSummary(resp.summary || null);
+      setRasiChart(resp.rasiChart || null);
+      setNavamsaChart(resp.navamsaChart || null);
+      setPlanetPositions(resp.planetPositions || []);
+      setBirthDetails(resp.birthDetails || []);
+      setHoroscopeMeta(resp.meta || null);
+      if (resp.mahadasas) {
+        const today = new Date().toISOString().slice(0, 10);
+        const mapped = resp.mahadasas.map((d: any) => {
+          const isToday =
+            d.start &&
+            d.end &&
+            today >= String(d.start) &&
+            today <= String(d.end);
+          return { ...d, open: Boolean(isToday) };
+        });
+        setMahadasas(mapped);
+      } else {
+        setMahadasas([
+          {
+            name: "Rahu",
+            start: "2020-01-01",
+            end: "2038-12-31",
+            open: false,
+            bhuktis: [
+              { name: "Rahu / Rahu", start: "2020-01-01", end: "2022-06-30" },
+              { name: "Rahu / Jupiter", start: "2022-07-01", end: "2024-12-31" },
+              { name: "Rahu / Saturn", start: "2025-01-01", end: "2027-06-30" },
+              { name: "Rahu / Mercury", start: "2027-07-01", end: "2029-12-31" },
+            ],
+          },
+          {
+            name: "Jupiter",
+            start: "2039-01-01",
+            end: "2055-12-31",
+            open: false,
+            bhuktis: [
+              { name: "Jupiter / Jupiter", start: "2039-01-01", end: "2040-12-31" },
+              { name: "Jupiter / Saturn", start: "2041-01-01", end: "2043-12-31" },
+            ],
+          },
+        ]);
+      }
+    } catch (err) {
+      setHoroscopeError(err instanceof Error ? err.message : "Failed to generate horoscope");
+    } finally {
+      setHoroscopeLoading(false);
+    }
+  };
+  const t = (key: string, ...rest: any[]) => {
+    const langCopy = copy[language] || copy.en || {};
+    const fallback = copy.en || {};
+    const val = (langCopy[key] ?? fallback[key]) as any;
     if (typeof val === "function") return val(...rest);
     return val;
   };
 
+  const renderSouthIndianChart = (chart: { label: string; bodies: string }[][], key: string) => {
+    const normalize = (value: string) => (value || "").trim().toLowerCase();
+    const labelMap = new Map<string, { raw: string; bodies: string }>();
+    chart.flat().forEach((c) => {
+      const label = c.label || "";
+      labelMap.set(normalize(label), { raw: label, bodies: c.bodies || "" });
+    });
+
+    const aliases: Record<string, string[]> = {
+      Meena: ["Meena", "Meenam", "Pisces", "?????", "???"],
+      Mesha: ["Mesha", "Mesham", "Aries", "?????", "???"],
+      Vrishabha: ["Vrishabha", "Rishabha", "Rishabam", "Taurus", "??????", "????"],
+      Mithuna: ["Mithuna", "Mithunam", "Gemini", "???????", "?????"],
+      Karka: ["Karka", "Karkata", "Cancer", "?????", "???", "????"],
+      Simha: ["Simha", "Simmam", "Leo", "???????", "????"],
+      Kanya: ["Kanya", "Kanni", "Virgo", "?????", "?????"],
+      Tula: ["Tula", "Thula", "Libra", "??????", "????"],
+      Vrishchika: ["Vrishchika", "Vrichika", "Scorpio", "???????????", "???????"],
+      Dhanu: ["Dhanu", "Dhanus", "Sagittarius", "?????", "???"],
+      Makara: ["Makara", "Makaram", "Capricorn", "?????", "???"],
+      Kumbha: ["Kumbha", "Kumbam", "Aquarius", "???????", "?????"]
+    };
+
+    const findCell = (keyName: string) => {
+      const aliasList = aliases[keyName] || [keyName];
+      for (const alias of aliasList) {
+        const match = labelMap.get(normalize(alias));
+        if (match) return { label: match.raw || alias, bodies: match.bodies };
+      }
+      for (const entry of labelMap.entries()) {
+        const norm = entry[0];
+        const data = entry[1];
+        if (aliasList.some((alias) => norm.includes(normalize(alias)))) {
+          return { label: data.raw || aliasList[0], bodies: data.bodies };
+        }
+      }
+      return { label: aliasList[0], bodies: "" };
+    };
+
+    const cells: ({ label: string; bodies: string } | null)[] = Array(16).fill(null);
+    // Meena fixed in top-left, clockwise around the frame
+    const positions: Array<[number, keyof typeof aliases]> = [
+      [0, "Meena"],
+      [1, "Mesha"],
+      [2, "Vrishabha"],
+      [3, "Mithuna"],
+      [7, "Karka"],
+      [11, "Simha"],
+      [15, "Kanya"],
+      [14, "Tula"],
+      [13, "Vrishchika"],
+      [12, "Dhanu"],
+      [8, "Makara"],
+      [4, "Kumbha"]
+    ];
+
+    positions.forEach(([idx, sign]) => {
+      const cellData = findCell(sign);
+      cells[idx] = { label: cellData.label, bodies: cellData.bodies };
+    });
+
+    return (
+      <div style={{ overflowX: "auto", width: "100%" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(70px, 1fr))",
+            gap: "6px",
+            minWidth: 300,
+            width: "100%",
+            maxWidth: "100%"
+          }}
+        >
+          {cells.map((cell, idx) => {
+            if (!cell) {
+              return <div key={`${key}-${idx}`} className="detail-item" style={{ minHeight: 40, opacity: 0.15 }} />;
+            }
+            const rawBodies = cell.bodies || "";
+            const fixedBodies = language === "ta" ? rawBodies.replace(/சன/g, "சனி") : rawBodies;
+            const bodiesLower = fixedBodies.toLowerCase();
+            const isAsc = bodiesLower.includes("asc") || bodiesLower.includes("lagna");
+            return (
+              <div
+                key={`${key}-${idx}`}
+                className="detail-item"
+                style={{
+                  minHeight: 80,
+                  borderWidth: 2,
+                  borderColor: isAsc ? "rgba(212, 175, 55, 0.85)" : undefined,
+                  boxShadow: isAsc ? "0 0 0 1px rgba(212,175,55,0.35)" : undefined,
+                  wordBreak: "break-word"
+                }}
+              >
+                <div className="detail-title">{cell.label}</div>
+                <p className="detail-text" style={{ fontWeight: isAsc ? 700 : 400 }}>{fixedBodies}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  const formatDasaDate = (iso?: string) => {
+    if (!iso) return "";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    const locale = language === "ta" ? "ta-IN" : language === "hi" ? "hi-IN" : "en-US";
+    return date.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+  };
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  const toggleMahadasa = (index: number) => {
+    setMahadasas((prev) => prev.map((d, i) => (i === index ? { ...d, open: !d.open } : d)));
+  };
+  const localizeText = (value: string) => {
+    if (!value) return value;
+    return language === "ta" ? value.replace(/சன/g, "சனி") : value;
+  };
   function getSignLabel(z: ZodiacSign): string {
     if (language === "ta" && z.tamil) return z.tamil;
     if (language === "hi" && z.hindi) return z.hindi;
@@ -683,7 +816,30 @@ export default function App() {
             <div className="brand-subtitle">Premium astrology guidance</div>
           </div>
         </div>
-        <div className="header-right">
+        <div className="header-right" style={{ gap: 16, display: "flex", alignItems: "center" }}>
+          <nav className="tabs menu" aria-label="Main menu">
+            <button
+              type="button"
+              className={`tab ${activeTab === "guidance" ? "active" : ""}`}
+              onClick={() => setActiveTab("guidance")}
+            >
+              {t("guidanceHeading")}
+            </button>
+            <button
+              type="button"
+              className={`tab ${activeTab === "panchangam" ? "active" : ""}`}
+              onClick={() => setActiveTab("panchangam")}
+            >
+              {t("panchangHeading")}
+            </button>
+            <button
+              type="button"
+              className={`tab ${activeTab === "horoscope" ? "active" : ""}`}
+              onClick={() => setActiveTab("horoscope")}
+            >
+              {t("horoscope")}
+            </button>
+          </nav>
           <div className="header-tagline">Astrological Guidance, Made Personal</div>
           <nav className="language-switcher" aria-label="Language selection">
             {languageOptions
@@ -716,23 +872,6 @@ export default function App() {
             <div className="loading-text">Fetching panchangam...</div>
           </div>
         )}
-
-        <div className="tabs">
-          <button
-            type="button"
-            className={`tab ${activeTab === "guidance" ? "active" : ""}`}
-            onClick={() => setActiveTab("guidance")}
-          >
-            {t("guidanceHeading")}
-          </button>
-          <button
-            type="button"
-            className={`tab ${activeTab === "panchangam" ? "active" : ""}`}
-            onClick={() => setActiveTab("panchangam")}
-          >
-            {t("panchangHeading")}
-          </button>
-        </div>
 
         {activeTab === "guidance" && (
           <div className="guidance-block">
@@ -1048,11 +1187,11 @@ export default function App() {
               >
                   <span>
                     {(() => {
-                    const tzDisplay = isValidTz(panchangTz)
-                      ? panchangTz
-                      : isValidTz(panchang?.meta.timezone)
-                      ? panchang?.meta.timezone
-                      : "";
+    const tzDisplay = isValidTz(panchangTz)
+      ? panchangTz
+      : isValidTz(panchang?.meta.timezone)
+      ? panchang?.meta.timezone
+      : "";
                     const label =
                       locationLabel ||
                       panchang?.meta.location.name ||
@@ -1107,8 +1246,8 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                    {placeSearching && <p className="error-text">Searching places...</p>}
-                    {placeSearchError && <p className="error-text">{placeSearchError}</p>}
+            {placeSearching && <p className="error-text">{copy[language]?.searchingPlaces ?? copy.en.searchingPlaces}</p>}
+            {placeSearchError && <p className="error-text">{placeSearchError}</p>}
                 {placeResults.length > 0 && (
                   <div className="hidden-list">
                     {placeResults.map((p) => {
@@ -1271,9 +1410,259 @@ export default function App() {
             )}
       </main>
 
+      {activeTab === "horoscope" && (
+        <main className="app">
+          <div className="guidance-block">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">{t("horoscopeEyebrow")}</p>
+                <h2>{t("horoscopeHeading")}</h2>
+              </div>
+            </div>
+
+            <div className="pref-strip">
+              <div className="pref-item">
+                <label className="pref-label">{t("horoscopeBirthDate")}</label>
+                <input
+                  type="date"
+                  className="pref-select"
+                  value={horoscopeDate}
+                  onChange={(e) => setHoroscopeDate(e.target.value)}
+                />
+              </div>
+              <div className="pref-item">
+                <label className="pref-label">{t("horoscopeBirthTime")}</label>
+                <input
+                  type="time"
+                  className="pref-select"
+                  value={horoscopeTime}
+                  onChange={(e) => setHoroscopeTime(e.target.value)}
+                />
+              </div>
+              <div className="pref-item pref-right" style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+                <label className="pref-label">{t("horoscopeLocation")}</label>
+                <input
+                  type="text"
+                  className="pref-select"
+                  style={{ flex: 1 }}
+                  value={horoscopePlaceQuery}
+                  placeholder="City / State / Country"
+                  onChange={(e) => setHoroscopePlaceQuery(e.target.value)}
+                />
+                <button
+                  className="load-panchang"
+                  type="button"
+                  onClick={generateHoroscope}
+                  disabled={horoscopeLoading}
+                  style={{ whiteSpace: "nowrap", minHeight: 44 }}
+                >
+                  {horoscopeLoading ? t("generatingHoroscope") : t("horoscopeGenerate")}
+                </button>
+              </div>
+            </div>
+
+            {horoscopeSearching && <p className="error-text">{copy[language]?.searchingPlaces ?? copy.en.searchingPlaces}</p>}
+            {horoscopeSearchError && <p className="error-text">{horoscopeSearchError}</p>}
+            {horoscopeError && <p className="error-text">{horoscopeError}</p>}
+            {horoscopeResults.length > 0 && (
+              <div className="hidden-list">
+                {horoscopeResults.map((p) => {
+                  const label = formatPlaceLabel(p);
+                  return (
+                    <button key={p.id} type="button" className="hidden-chip" onClick={() => handleHoroscopeSelect(p)}>
+                      {label || p.name}
+                      {p.timezone ? ` (${p.timezone})` : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="guidance-grid" style={{ gridTemplateColumns: "1fr" }}>
+              {horoscopeSummary && (
+                <>
+                  <div className="card">
+                    <div className="card-head">
+                      <h4 className="sign-title">{t("birthChartTitle")}</h4>
+                    </div>
+                    <p className="detail-text">{t("birthChartDescription")}</p>
+                    <p className="detail-text">{horoscopeSummary}</p>
+                    {horoscopeMeta && (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginTop: 12 }}>
+                        <div className="detail-item">
+                          <div className="detail-title">{t("chartInfoMethod")}</div>
+                          <p className="detail-text">
+                            {[horoscopeMeta.method, horoscopeMeta.ayanamsa || "Lahiri", horoscopeMeta.houseSystem || "Whole Sign"]
+                              .filter(Boolean)
+                              .join(" | ")}
+                          </p>
+                        </div>
+                        <div className="detail-item">
+                          <div className="detail-title">{t("chartInfoCoords")}</div>
+                          <p className="detail-text">
+                            Lat {horoscopeMeta.lat}, Lon {horoscopeMeta.lon} ({horoscopeMeta.tz})
+                          </p>
+                        </div>
+                        {horoscopeMeta.placeName && (
+                          <div className="detail-item">
+                            <div className="detail-title">{t("chartInfoPlace")}</div>
+                            <p className="detail-text">{horoscopeMeta.placeName}</p>
+                          </div>
+                        )}
+                        <div className="detail-item">
+                          <div className="detail-title">{t("chartInfoAsc")}</div>
+                          <p className="detail-text">{horoscopeMeta.ascendant || ""}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {rasiChart && (
+                    <div className="card">
+                      <div className="card-head">
+                        <h4 className="sign-title">{t("horoscopeRasi")}</h4>
+                      </div>
+                      {renderSouthIndianChart(rasiChart, "rasi")}
+                    </div>
+                  )}
+
+                  {navamsaChart && (
+                    <div className="card">
+                      <div className="card-head">
+                        <h4 className="sign-title">{t("horoscopeNavamsa")}</h4>
+                      </div>
+                      {renderSouthIndianChart(navamsaChart, "navamsa")}
+                    </div>
+                  )}                  {mahadasas.length > 0 && (
+                    <div className="card">
+                      <div className="card-head">
+                        <h4 className="sign-title">{t("mahadasaTitle")}</h4>
+                      </div>
+                      <div className="detail-block">
+                        {mahadasas.map((dasa, idx) => (
+                          <div key={`${dasa.name}-${idx}`} className="detail-item">
+                            <div className="hidden-panel-row">
+                              <div>
+                                <div className="detail-title">{dasa.name}</div>
+                                <div className="panch-meta">
+                                  <span>{t("starts")}: {formatDasaDate(dasa.start)}</span>
+                                  <span>{t("ends")}: {formatDasaDate(dasa.end)}</span>
+                                </div>
+                              </div>
+                              <button className="more-button" type="button" onClick={() => toggleMahadasa(idx)} aria-label={dasa.open ? t("hide") : t("show")}>
+                                <span aria-hidden="true" className={`icon ${dasa.open ? "icon-up" : "icon-down"}`} />
+                              </button>
+                            </div>
+                            {dasa.open && dasa.bhuktis?.length > 0 && (
+                              <div className="detail-block" style={{ marginTop: 8, marginLeft: 12 }}>
+                                {dasa.bhuktis.map((b, bi) => (
+                                  <div
+                                    key={`${dasa.name}-${bi}`}
+                                    className="detail-item"
+                                    style={{
+                                      background: "rgba(242,232,213,0.03)",
+                                      borderColor:
+                                        todayIso >= String(b.start) && todayIso <= String(b.end)
+                                          ? "rgba(212,175,55,0.8)"
+                                          : undefined,
+                                      boxShadow:
+                                        todayIso >= String(b.start) && todayIso <= String(b.end)
+                                          ? "0 0 0 1px rgba(212,175,55,0.35)"
+                                          : undefined
+                                    }}
+                                  >
+                                    <div className="detail-title">{t("bukthi")}: {b.name}</div>
+                                    <div className="panch-meta">
+                                      <span>{t("starts")}: {formatDasaDate(b.start)}</span>
+                                      <span>{t("ends")}: {formatDasaDate(b.end)}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {planetPositions.length > 0 && (
+                    <div className="card">
+                      <div className="card-head">
+                        <h4 className="sign-title">{t("planetPositionsTitle")}</h4>
+                      </div>
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+                          <thead>
+                            <tr>
+                              {["Planets", "Positions", "Degrees", "Rasi", "Rasi Lord", "Nakshatra", "Nakshatra Lord"].map((h) => (
+                                <th
+                                  key={h}
+                                  style={{
+                                    textAlign: "left",
+                                    padding: "8px 6px",
+                                    borderBottom: "1px solid rgba(212, 175, 55, 0.24)",
+                                    color: "var(--star-glow)"
+                                  }}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {planetPositions.map((row, idx) => (
+                              <tr key={idx} style={{ borderBottom: "1px solid rgba(212, 175, 55, 0.1)" }}>
+                                <td style={{ padding: "8px 6px", fontWeight: 700 }}>{row.planet}</td>
+                                <td style={{ padding: "8px 6px" }}>{localizeText(row.position)}</td>
+                                <td style={{ padding: "8px 6px" }}>{localizeText(row.degree)}</td>
+                                <td style={{ padding: "8px 6px" }}>{localizeText(row.rasi)}</td>
+                                <td style={{ padding: "8px 6px" }}>{localizeText(row.rasiLord)}</td>
+                                <td style={{ padding: "8px 6px" }}>{localizeText(row.nakshatra)}</td>
+                                <td style={{ padding: "8px 6px" }}>{localizeText(row.nakshatraLord)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {birthDetails.length > 0 && (
+                    <div className="card">
+                      <div className="card-head">
+                        <h4 className="sign-title">{t("birthDetailsTitle")}</h4>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                        {birthDetails.map((item, idx) => (
+                          <div key={idx} className="detail-item">
+                            <div className="detail-title">{item.label}</div>
+                            <p className="detail-text">{item.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </main>
+      )}
+
       <footer className="footer">
         <span>© 2026 AstroZone.in. All rights reserved.</span>
       </footer>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

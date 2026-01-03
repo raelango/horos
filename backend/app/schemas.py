@@ -165,3 +165,28 @@ class AuditEvent(BaseModel):
     type: str
     timestamp: datetime
     metadata: dict
+
+
+class HoroscopeChartCell(BaseModel):
+    label: str
+    bodies: str
+
+
+class HoroscopeRequest(BaseModel):
+    date: str
+    time: str
+    lat: float
+    lon: float
+    tz: str
+    placeName: str | None = None
+    language: str = "en"
+
+
+class HoroscopeResponse(CorrelatedResponse):
+    summary: str
+    rasiChart: list[list[HoroscopeChartCell]]
+    navamsaChart: list[list[HoroscopeChartCell]]
+    planetPositions: list[dict]
+    birthDetails: list[dict]
+    meta: dict | None = None
+    mahadasas: list[dict] = []

@@ -55,6 +55,7 @@ class PanchangService:
             "wib": "Asia/Jakarta",
         }
         self._openai_client: Optional[OpenAI] = None
+        self._fallback_tz = "UTC"
 
     def _compute_day_lengths(self, target_date: date, lat: float) -> float:
         # Simple seasonality approximation using declination cosine curve.
@@ -271,8 +272,7 @@ class PanchangService:
         cached = await self.tz_helper.get(place.strip())
         if cached and cached.get("timezone"):
             try:
-                tz = cached["timezone"]
-                await self._resolve_timezone(tz)
+                tz = cached.get("timezone") or self._fallback_tz
                 return {
                     "lat": float(cached.get("lat") or 0.0) if cached.get("lat") else None,
                     "lon": float(cached.get("long") or 0.0) if cached.get("long") else None,
@@ -283,10 +283,12 @@ class PanchangService:
                 pass
 
         result = await self._reverse_geocode_nominatim(place=place)
-        if result and result.get("tz"):
-            await self.tz_helper.upsert(result["name"], result["tz"], str(result["lat"]), str(result["lon"]))
-            return result
-        return None
+        if not result:
+            return None
+        if not result.get("tz"):
+            result["tz"] = self._fallback_tz
+        await self.tz_helper.upsert(result["name"], result["tz"], str(result["lat"]), str(result["lon"]))
+        return result
 
     async def resolve_place_from_coords(self, lat: float, lon: float) -> Optional[dict]:
         lat_str = f"{lat:.4f}"
@@ -294,23 +296,27 @@ class PanchangService:
         cached = await self.tz_helper.get_by_coords(lat_str, lon_str)
         if cached and cached.get("timezone"):
             try:
-                await self._resolve_timezone(cached["timezone"])
+                tz = cached.get("timezone") or self._fallback_tz
                 return {
                     "lat": float(cached.get("lat") or lat),
                     "lon": float(cached.get("long") or lon),
-                    "tz": cached["timezone"],
+                    "tz": tz,
                     "name": cached.get("title") or "",
                 }
             except Exception:
                 pass
 
         result = await self._reverse_geocode_nominatim(lat=lat, lon=lon)
-        if result and result.get("tz"):
-            await self.tz_helper.upsert(result["name"], result["tz"], lat_str, lon_str)
-            return result
-        return None
+        if not result:
+            return None
+        if not result.get("tz"):
+            result["tz"] = self._fallback_tz
+        await self.tz_helper.upsert(result["name"], result["tz"], lat_str, lon_str)
+        return result
 
-    async def _reverse_geocode_nominatim(self, place: str | None = None, lat: float | None = None, lon: float | None = None) -> Optional[dict]:
+    async def _reverse_geocode_nominatim(
+        self, place: str | None = None, lat: float | None = None, lon: float | None = None
+    ) -> Optional[dict]:
         if place is None and (lat is None or lon is None):
             return None
         try:
@@ -344,10 +350,7 @@ class PanchangService:
             label = ", ".join([p for p in name_parts if p])
             out_lat = float(data.get("lat") or lat or 0)
             out_lon = float(data.get("lon") or lon or 0)
-            tz = await self._timezone_from_coords(out_lat, out_lon) or ""
-            if not tz:
-                return None
-            await self._resolve_timezone(tz)
+            tz = await self._timezone_from_coords(out_lat, out_lon) or self._fallback_tz
             return {"lat": out_lat, "lon": out_lon, "tz": tz, "name": label or place or ""}
         except Exception:
             return None
