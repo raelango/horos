@@ -23,6 +23,9 @@ class Settings:
         "SHAREPOINT_PROMPT_LIST_ID", "{5635A4ED-CDC7-453D-B2E2-36F0E71BCF8A}"
     )
     sharepoint_cache_list_id: str = os.environ.get("SHAREPOINT_CACHE_LIST_ID", "{00ba0c35-37c0-422f-878f-639d45e9816a}")
+    sharepoint_timezone_alias_list_id: str = os.environ.get(
+        "SHAREPOINT_TIMEZONE_ALIAS_LIST_ID", "{b358d41f-7efa-4a1f-a6ef-6050c674a8f4}"
+    )
     openai_model: str = os.environ.get("OPENAI_MODEL", "gpt-4.1")
     openai_api_key: str = os.environ.get("OPENAI_API_KEY", "")
     openai_base_url: str = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")

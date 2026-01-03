@@ -38,10 +38,19 @@ function Build-And-Push {
     [string]$Context
   )
   $full = "${Registry}.azurecr.io/${ImageName}:${Tag}"
-  Write-Host "`nBuilding $full (Dockerfile=$Dockerfile, Context=$Context)..."
-  docker build --file $Dockerfile --tag $full $Context
+  $latest = "${Registry}.azurecr.io/${ImageName}:latest"
+  Write-Host "`nBuilding $full and tagging as latest (Dockerfile=$Dockerfile, Context=$Context)..."
+  docker build --file $Dockerfile --tag $full --tag $latest $Context
+
   Write-Host "Pushing $full..."
   docker push $full
+  if ($Tag -ne "latest") {
+    Write-Host "Pushing $latest (always keep a latest tag)..."
+    docker push $latest
+  }
+  if ($Tag -eq "latest") {
+    Write-Host "Tag is latest; already pushed."
+  }
 }
 
 Build-And-Push -ImageName $BackendImage -Tag $BackendTag -Dockerfile $BackendDockerfile -Context $BackendContext

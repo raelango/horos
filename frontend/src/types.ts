@@ -67,9 +67,58 @@ export interface ZodiacSign {
   tamil?: string | null;
   hindi?: string | null;
   methodology: Methodology;
+  sequence?: number;
 }
 
 export interface ZodiacSignResponse {
   correlationId: string;
   signs: ZodiacSign[];
+}
+
+export interface PanchangWindow {
+  start: string;
+  end: string;
+  label?: string | null;
+  phase?: string | null;
+  nakshatra?: string | null;
+  kind?: string | null;
+}
+
+export interface PanchangAnga {
+  name: string;
+  start?: string | null;
+  end?: string | null;
+}
+
+export interface PanchangData {
+  meta: {
+    date: string;
+    timezone: string;
+    location: { lat: number; lon: number; name?: string };
+    hinduDay: { start: string; end: string };
+  };
+  astronomy: {
+    sunrise: string;
+    sunset: string;
+    nextSunrise: string;
+    dayLengthMinutes: number;
+    nightLengthMinutes: number;
+  };
+  panchang: {
+    vara: { name: string };
+    tithi: PanchangAnga[];
+    nakshatra: PanchangAnga[];
+    yoga: PanchangAnga[];
+    karana: PanchangAnga[];
+  };
+  timings: {
+    rahuKalam: PanchangWindow[];
+    yamagandam: PanchangWindow[];
+    gulikai: PanchangWindow[];
+    durmuhurtam: PanchangWindow[];
+    varjyam: PanchangWindow[];
+    brahmaMuhurta: PanchangWindow[];
+    abhijitMuhurta: PanchangWindow[];
+  };
+  notes: { code: string; text: string }[];
 }

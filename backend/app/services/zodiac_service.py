@@ -18,6 +18,7 @@ class ZodiacService:
                 tamil=rec.get("tamil"),
                 hindi=rec.get("hindi"),
                 methodology=methodology,
+                sequence=rec.get("sequence"),
             )
             for rec in records
         ]

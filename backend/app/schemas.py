@@ -109,10 +109,49 @@ class ZodiacSign(BaseModel):
     tamil: str | None = None
     hindi: str | None = None
     methodology: str
+    sequence: int | None = None
 
 
 class ZodiacSignListResponse(CorrelatedResponse):
     signs: List[ZodiacSign]
+
+
+class PanchangWindow(BaseModel):
+    start: str
+    end: str
+    label: str | None = None
+    phase: str | None = None
+    nakshatra: str | None = None
+    kind: str | None = None  # auspicious | avoid | neutral
+
+
+class PanchangAnga(BaseModel):
+    name: str
+    start: str | None = None
+    end: str | None = None
+
+
+class PanchangMeta(BaseModel):
+    date: str
+    timezone: str
+    location: dict
+    hinduDay: dict
+
+
+class PanchangAstronomy(BaseModel):
+    sunrise: str
+    sunset: str
+    nextSunrise: str
+    dayLengthMinutes: int
+    nightLengthMinutes: int
+
+
+class PanchangData(BaseModel):
+    meta: PanchangMeta
+    astronomy: PanchangAstronomy
+    panchang: dict
+    timings: dict
+    notes: List[dict] = []
 
 
 class ErrorEnvelope(BaseModel):

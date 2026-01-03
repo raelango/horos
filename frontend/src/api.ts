@@ -61,3 +61,36 @@ export async function fetchGuidanceBatch(params: {
   if (!res.ok) throw new Error(`Failed to fetch batch guidance: ${res.status}`);
   return res.json();
 }
+
+export async function fetchPanchangam(params: {
+  date: string;
+  lat: number;
+  lon: number;
+  tz: string;
+  locale?: string;
+  locationName?: string;
+}) {
+  const query = new URLSearchParams({
+    date: params.date,
+    lat: String(params.lat),
+    lon: String(params.lon),
+    tz: params.tz
+  });
+  if (params.locale) query.set("locale", params.locale);
+  if (params.locationName) query.set("locationName", params.locationName);
+  const res = await fetch(`${BASE_URL}/panchang/daily?${query.toString()}`);
+  if (!res.ok) throw new Error(`Failed to fetch panchangam: ${res.status}`);
+  return res.json();
+}
+
+export async function locatePanchangPlace(query: { place?: string; lat?: number; lon?: number }) {
+  const qs = new URLSearchParams();
+  if (query.place) qs.set("place", query.place);
+  if (query.lat !== undefined && query.lon !== undefined) {
+    qs.set("lat", String(query.lat));
+    qs.set("lon", String(query.lon));
+  }
+  const res = await fetch(`${BASE_URL}/panchang/locate?${qs.toString()}`);
+  if (!res.ok) throw new Error(`Failed to resolve place: ${res.status}`);
+  return res.json();
+}
